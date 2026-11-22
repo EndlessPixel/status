@@ -2,8 +2,8 @@ name: 服务状态探测
 
 on:
   schedule:
-    # 每小时的第 7 分钟跑。错开整点：GitHub 的定时任务在整点最拥堵，常被延迟
-    - cron: "7 * * * *"
+    # 每小时的第 10 分钟跑。错开整点：GitHub 的定时任务在整点最拥堵，常被延迟
+    - cron: "10 * * * *"
   workflow_dispatch: # 支持手动触发，改完配置可以立即验证
 
 permissions:
