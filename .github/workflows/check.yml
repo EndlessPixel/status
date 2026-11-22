@@ -1,0 +1,45 @@
+name: 服务状态探测
+
+on:
+  schedule:
+    # 每小时的第 7 分钟跑。错开整点：GitHub 的定时任务在整点最拥堵，常被延迟
+    - cron: "7 * * * *"
+  workflow_dispatch: # 支持手动触发，改完配置可以立即验证
+
+permissions:
+  contents: write
+
+concurrency:
+  group: status-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 探测各服务
+        env:
+          # 代理出口与硬件监控地址不公开，通过 secrets 注入；未配置则跳过对应服务
+          STATUS_API_BASE_URL: ${{ secrets.STATUS_API_BASE_URL }}
+          STATUS_TARGET_API_URL: ${{ secrets.STATUS_TARGET_API_URL }}
+        run: node scripts/check.mjs
+
+      - name: 提交数据
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          # 本轮没有任何变化时不必产生空提交
+          if git diff --staged --quiet; then
+            echo "无变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(data): $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
