@@ -1,10 +1,7 @@
 name: 服务状态探测
 
 on:
-  schedule:
-    # 每小时的第 10 分钟跑。错开整点：GitHub 的定时任务在整点最拥堵，常被延迟
-    - cron: "10 * * * *"
-  workflow_dispatch: # 支持手动触发，改完配置可以立即验证
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,6 +16,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -26,7 +25,6 @@ jobs:
 
       - name: 探测各服务
         env:
-          # 代理出口与硬件监控地址不公开，通过 secrets 注入；未配置则跳过对应服务
           STATUS_API_BASE_URL: ${{ secrets.STATUS_API_BASE_URL }}
           STATUS_TARGET_API_URL: ${{ secrets.STATUS_TARGET_API_URL }}
         run: node scripts/check.mjs
@@ -36,7 +34,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data
-          # 本轮没有任何变化时不必产生空提交
           if git diff --staged --quiet; then
             echo "无变化，跳过提交"
             exit 0
